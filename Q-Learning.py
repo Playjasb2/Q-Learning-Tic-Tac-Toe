@@ -3,14 +3,15 @@ from util import *
 from tqdm import tqdm
 import time
 
-EPISODES = 50000
+EPISODES = 1000000
 LEARNING_RATE = 0.1
 DISCOUNT = 0.95
 
-epsilon = 0.5
-ep_decay = 0.5/EPISODES
+epsilon = 0.9
+ep_decay = epsilon/EPISODES
+zero_epsilon_episode = 700000
 
-q_table = np.random.uniform(-2, 0, (3**9, 9))
+q_table = np.random.uniform(0, 1, (3**9, 9))
 
 board = np.zeros((3, 3), dtype=int)
 
@@ -22,7 +23,10 @@ last_action = None
 
 for episode in tqdm(range(EPISODES)):
     board = np.zeros((3, 3), dtype=int)
+    Player1.q_table = q_table
+    Player2.q_table = q_table
     current_player = Player1
+    last_board = board
     while True:
         if current_player == Player2:
             new_board = flipBoard(board)
@@ -44,34 +48,45 @@ for episode in tqdm(range(EPISODES)):
 
         if winner:
             if winner == 1:
-                q_table[(getBoardIndex(board),) + (moveList.index(action),)] = 10
+                q_table[(getBoardIndex(last_board),) + (moveList.index(action),)] = 10
                 new_board = flipBoard(last_board)
+                new_board[last_action] = 0
                 q_table[(getBoardIndex(new_board),) + (moveList.index(last_action),)] = -10
             else:
-                new_board = flipBoard(board)
+                new_board = flipBoard(last_board)
                 q_table[(getBoardIndex(new_board),) + (moveList.index(action),)] = 10
+                last_board[last_action] = 0
                 q_table[(getBoardIndex(last_board),) + (moveList.index(last_action),)] = -10
 
             break
 
         if checkStalemate(board):
             if current_player == Player1:
-                q_table[(getBoardIndex(board),) + (moveList.index(action),)] = 0
+                q_table[(getBoardIndex(last_board),) + (moveList.index(action),)] = 0
                 new_board = flipBoard(last_board)
+                new_board[last_action] = 0
                 q_table[(getBoardIndex(new_board),) + (moveList.index(last_action),)] = 0
             else:
-                new_board = flipBoard(board)
+                new_board = flipBoard(last_board)
                 q_table[(getBoardIndex(new_board),) + (moveList.index(action),)] = 0
+                last_board[last_action] = 0
                 q_table[(getBoardIndex(last_board),) + (moveList.index(last_action),)] = 0
 
             break
 
-        max_future_q = np.max(q_table[getBoardIndex(new_board)])
+        if current_player == Player1:
+            future_board = board
+            past_board = last_board
+        else:
+            future_board = flipBoard(board)
+            past_board = flipBoard(last_board)
+
+        max_future_q = np.max(q_table[getBoardIndex(future_board)])
 
         reward = -1
 
         new_q = current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q - current_q)
-        q_table[(getBoardIndex(new_board),) + (moveList.index(action),)] = new_q
+        q_table[(getBoardIndex(past_board),) + (moveList.index(action),)] = new_q
 
         last_action = action
         last_board = getBoardCopy(board)
@@ -81,7 +96,7 @@ for episode in tqdm(range(EPISODES)):
 
         epsilon -= ep_decay
 
-        if epsilon < 0:
+        if epsilon < 0 or episode >= zero_epsilon_episode:
             epsilon = 0
 
         if current_player == Player1:

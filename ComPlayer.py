@@ -25,6 +25,9 @@ class ComPlayer(Player):
 
         valid_moves_with_q_values = self.q_table[boardIndex][validIndices]
 
+        # print(validMoves)
+        # print(valid_moves_with_q_values)
+
         index = int(np.argmax(valid_moves_with_q_values))
 
         return validMoves[index]

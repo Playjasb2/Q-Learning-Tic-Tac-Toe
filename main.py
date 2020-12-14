@@ -5,7 +5,7 @@ from util import *
 board = np.zeros((3, 3), dtype=int)
 
 # load q_table npy file here
-q_table = np.load("")
+q_table = np.load("q_table-1607969617.npy")
 
 Player1 = HumanPlayer(1)
 Player2 = ComPlayer(2, q_table)
